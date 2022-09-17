@@ -7,8 +7,7 @@ from django.contrib.auth.models import User
 class PostQuerySet(models.QuerySet):
 
     def popular(self):
-        popular_posts = self.annotate(Count('likes')).order_by('-likes__count')
-        return popular_posts
+        return self.annotate(Count('likes')).order_by('-likes__count')
 
     def prefetch_tags(self):
         prefetch = Prefetch(
@@ -57,8 +56,7 @@ class Post(models.Model):
 class TagQuerySet(models.QuerySet):
 
     def popular(self):
-        popular_tags = self.annotate(Count('posts')).order_by('-posts__count')
-        return popular_tags
+        return self.annotate(Count('posts')).order_by('-posts__count')
 
 
 class Tag(models.Model):

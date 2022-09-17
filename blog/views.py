@@ -2,10 +2,6 @@ from django.shortcuts import render
 from blog.models import Comment, Post, Tag
 
 
-def get_related_posts_count(tag):
-    return tag.posts.count()
-
-
 def serialize_post(post):
     return {
         'title': post.title,
@@ -50,7 +46,7 @@ def index(request):
 
 def post_detail(request, slug):
     post = Post.objects.get(slug=slug)
-    comments = Comment.objects.filter(post=post)
+    comments = Comment.objects.filter(post=post).prefetch_related('author')
     serialized_comments = []
     for comment in comments:
         serialized_comments.append({
@@ -59,8 +55,6 @@ def post_detail(request, slug):
             'author': comment.author.username,
         })
 
-    likes = post.likes.all()
-
     related_tags = post.tags.popular()
 
     serialized_post = {
@@ -68,7 +62,7 @@ def post_detail(request, slug):
         'text': post.text,
         'author': post.author.username,
         'comments': serialized_comments,
-        'likes_amount': len(likes),
+        'likes_amount': post.likes.count(),
         'image_url': post.image.url if post.image else None,
         'published_at': post.published_at,
         'slug': post.slug,
@@ -100,7 +94,8 @@ def tag_filter(request, tag_title):
         .prefetch_related('author', 'comments') \
         .prefetch_tags()[:5]
 
-    related_posts = tag.posts.prefetch_tags()[:20]
+    related_posts = tag.posts.prefetch_related('author', 'comments') \
+        .prefetch_tags()[:20]
 
     context = {
         'tag': tag.title,
