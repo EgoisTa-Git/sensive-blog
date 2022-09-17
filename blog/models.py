@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import Count
+from django.db.models import Count, Prefetch
 from django.urls import reverse
 from django.contrib.auth.models import User
 
@@ -10,22 +10,13 @@ class PostQuerySet(models.QuerySet):
         popular_posts = self.annotate(Count('likes')).order_by('-likes__count')
         return popular_posts
 
-    def fetch_with_comments_count(self):
-        """Метод собирает посты с подсчетом количества комментариев.
-        Объединение данных происходит на стороне Python, что исключает
-        избыточную нагрузку на БД при использовании в связке с другими
-        методами с annotate()."""
-        posts_with_comments = Post.objects.filter(
-            id__in=[post.id for post in self],
-        ).annotate(comments_count=Count('comments'))
-        ids_and_comments = posts_with_comments.values_list(
-            'id',
-            'comments_count',
+    def prefetch_tags(self):
+        prefetch = Prefetch(
+            'tags',
+            queryset=Tag.objects.annotate(Count('posts')).order_by(
+                '-posts__count'),
         )
-        count_for_id = dict(ids_and_comments)
-        for post in self:
-            post.comments_count = count_for_id[post.id]
-        return list(self)
+        return self.prefetch_related(prefetch)
 
 
 class Post(models.Model):
